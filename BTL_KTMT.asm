@@ -2,92 +2,141 @@
 .stack 100h
 
 .data
-    num1  db ?
-    num2  db ?
-    op    db ?
-    result dw ?
-    errmsg db 'Loi: Toan tu khong hop le hoac chia 0.$'
+    s1      db 6 dup(?)          
+    s2      db 6 dup(?)       
+    number1 dw 0                 
+    number2 dw 0               
+    operator db ?               
+    result  dw 0                
+    error   db 'Loi: Toan tu khong hop le hoac chia 0.$'
+    guide1  db 'Nhap vao so thu nhat: $'
+    guide2  db 'Nhap vao toan tu (+ - * /): $'
+    guide3  db 'Nhap vao so thu hai: $'
+    ans     db 'Ket qua la: $'
 
 .code
 start:
     mov ax, @data
     mov ds, ax
 
-
-    mov ah, 01h
+    call newline
+    lea dx, guide1
+    mov ah, 09h
     int 21h
-    sub al, '0'
-    mov num1, al
+    lea di, s1
+    call read_number
+    lea si, s1
+    call atoi
+    mov number1, ax
 
     call newline
-
-
+    lea dx, guide2
+    mov ah, 09h
+    int 21h
     mov ah, 01h
     int 21h
-    mov op, al
+    mov operator, al
 
     call newline
-
-
-    mov ah, 01h
+    lea dx, guide3
+    mov ah, 09h
     int 21h
-    sub al, '0'
-    mov num2, al
+    lea di, s2
+    call read_number
+    lea si, s2
+    call atoi
+    mov number2, ax
 
-    mov al, num1
-    mov bl, num2
+    mov ax, number1
+    mov bx, number2
 
-    cmp op, '+'
+    cmp operator, '+'
     je cong
-    cmp op, '-'
+    cmp operator, '-'
     je tru
-    cmp op, '*'
+    cmp operator, '*'
     je nhan
-    cmp op, '/'
+    cmp operator, '/'
     je chia
-
-    jmp loi
+    jmp loi_op
 
 cong:
-    add al, bl
-    mov ah, 0
+    add ax, bx
     mov result, ax
-    jmp in_kq
+    jmp in_ans
 
 tru:
-    sub al, bl
-    mov ah, 0
+    sub ax, bx
     mov result, ax
-    jmp in_kq
+    jmp in_ans
 
 nhan:
-    mul bl         
+    mul bx
     mov result, ax
-    jmp in_kq
+    jmp in_ans
 
 chia:
-    cmp bl, 0
-    je loi
-    xor ah, ah
-    div bl         
-    mov ah, 0
+    cmp bx, 0
+    je loi_op
+    xor dx, dx
+    div bx
     mov result, ax
-    jmp in_kq
+    jmp in_ans
 
-loi:
+loi_op:
+    call newline
     mov ah, 09h
-    lea dx, errmsg
+    lea dx, error
     int 21h
-    jmp ketthuc
+    jmp end_program
 
-in_kq:
-    call newline      
+in_ans:
+    call newline
+    lea dx, ans
+    mov ah, 09h
+    int 21h
     mov ax, result
     call print_num
+    jmp end_program
 
-ketthuc:
+end_program:
     mov ah, 4Ch
     int 21h
+read_number proc
+    xor cx, cx
+read_loop:
+    mov ah, 01h
+    int 21h
+    cmp al, 13
+    je done_input
+    mov [di], al
+    inc di
+    inc cx
+    cmp cx, 5
+    je done_input
+    jmp read_loop
+done_input:
+    mov byte ptr [di], 0
+    ret
+read_number endp
+atoi proc
+    xor ax, ax
+    mov bx, 10
+next_digit:
+    mov cl, [si]
+    cmp cl, 0
+    je done_conv
+    sub cl, '0'
+    xor ch, ch
+    push ax
+    mul bx
+    pop dx
+    add ax, cx
+    inc si
+    jmp next_digit
+done_conv:
+    ret
+atoi endp
 print_num proc
     push ax
     push bx
@@ -96,6 +145,12 @@ print_num proc
 
     xor cx, cx
     mov bx, 10
+    cmp ax, 0
+    jne chialai
+    mov dl, '0'
+    mov ah, 02h
+    int 21h
+    jmp done
 
 chialai:
     xor dx, dx
@@ -112,14 +167,14 @@ hienthi:
     int 21h
     loop hienthi
 
-    call newline   
-
+done:
+    call newline
     pop dx
     pop cx
     pop bx
     pop ax
     ret
-print_num endp 
+print_num endp
 newline proc
     mov ah, 02h
     mov dl, 0Dh
